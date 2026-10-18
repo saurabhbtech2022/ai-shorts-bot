@@ -84,6 +84,6 @@ jobs:
             echo "No state changes to commit."
             exit 0
           fi
-          git pull --rebase origin "${{ github.ref_name }}"
           git commit -m "chore: update state after ${{ env.SLOT }} short"
+          git pull --rebase origin "${{ github.ref_name }}"
           git push
