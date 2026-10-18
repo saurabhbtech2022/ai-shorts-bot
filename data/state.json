@@ -1,10 +1,11 @@
 {
-  "index": 2,
+  "index": 3,
   "last_run_date": "2026-10-18",
   "daily_slots": {
     "2026-10-18": [
       "morning",
-      "afternoon"
+      "afternoon",
+      "evening"
     ]
   },
   "history": [
@@ -19,6 +20,12 @@
       "slot": "afternoon",
       "title": "बालकाण्ड · दोहा 0 · shloka",
       "video_id": "buh2AByPUlk"
+    },
+    {
+      "date": "2026-10-18",
+      "slot": "evening",
+      "title": "बालकाण्ड · दोहा 0 · shloka",
+      "video_id": "kMg_0a7xvpc"
     }
   ]
 }
