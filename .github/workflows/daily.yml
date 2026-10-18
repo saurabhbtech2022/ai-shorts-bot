@@ -69,7 +69,10 @@ jobs:
           SCENES_PER_RUN: "1"
           ENABLE_VOICEOVER: "true"
           ENABLE_TEXT_OVERLAY: "true"
+          ENABLE_PART_BADGE: "true"
+          ENABLE_SUBSCRIBE_CTA: "true"
           PRIVACY_STATUS: public
+          TIMEZONE: Asia/Kolkata
         run: python run_daily.py --slot "$SLOT"
 
       - name: Commit state.json if changed

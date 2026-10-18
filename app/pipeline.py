@@ -223,6 +223,8 @@ def run_pipeline(
             video_path,
             scene_title=scenes[0].title_hindi,
             caption_hindi=caption_text,
+            part_number=scenes[0].index + 1,
+            image_prompt_en=scenes[0].image_prompt_en,
             settings=settings,
         )
         logger.info("Upload step took %.2fs", time.perf_counter() - t0)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import random
+import re
 import time
 from pathlib import Path
 
@@ -20,6 +21,23 @@ logger = setup_logging()
 YOUTUBE_UPLOAD_SCOPE = "https://www.googleapis.com/auth/youtube.upload"
 RETRIABLE_STATUS_CODES = {500, 502, 503, 504}
 
+_KAND_EN: dict[str, str] = {
+    "बालकाण्ड": "Bal Kand",
+    "अयोध्याकाण्ड": "Ayodhya Kand",
+    "अरण्यकाण्ड": "Aranya Kand",
+    "किष्किन्धाकाण्ड": "Kishkindha Kand",
+    "सुन्दरकाण्ड": "Sundar Kand",
+    "लंकाकाण्ड": "Lanka Kand",
+    "उत्तरकाण्ड": "Uttar Kand",
+}
+
+_STANZA_EN: dict[str, str] = {
+    "doha": "Doha",
+    "chaupai": "Chaupai",
+    "shloka": "Shloka",
+    "sortha": "Sortha",
+}
+
 
 def _build_credentials(settings: Settings) -> Credentials:
     if not settings.youtube_configured:
@@ -36,40 +54,107 @@ def _build_credentials(settings: Settings) -> Credentials:
     return creds
 
 
-def _build_title(scene_title: str) -> str:
-    base = f"{scene_title} | Ramayan Mahabharat #Shorts"
+def title_english_from_hindi(scene_title_hindi: str) -> str:
+    """Mirror Hindi scene title (Kand · Doha N · type) in English."""
+    parts = [p.strip() for p in scene_title_hindi.split("·")]
+    if len(parts) < 2:
+        return scene_title_hindi
+    kand_hi = parts[0]
+    kand_en = _KAND_EN.get(kand_hi, kand_hi)
+    rest = parts[1:]
+    out_parts = [kand_en]
+    for seg in rest:
+        m = re.match(r"दोहा\s*(\d+)", seg, re.IGNORECASE)
+        if m:
+            out_parts.append(f"Doha {m.group(1)}")
+            continue
+        low = seg.lower().strip()
+        if low in _STANZA_EN:
+            out_parts.append(_STANZA_EN[low])
+        else:
+            out_parts.append(seg)
+    return " · ".join(out_parts)
+
+
+def english_summary_from_prompt(image_prompt_en: str) -> str:
+    """First English narrative line from the image prompt field."""
+    chunks = [c.strip() for c in image_prompt_en.split(",")]
+    if len(chunks) >= 4:
+        return chunks[3]
+    return ""
+
+
+def _build_title(scene_title_hindi: str, part_number: int) -> str:
+    title_en = title_english_from_hindi(scene_title_hindi)
+    part_hi = f"भाग {part_number}"
+    part_en = f"Part {part_number}"
+    base = f"{part_hi} | {scene_title_hindi} | {part_en} | {title_en} | Ramcharitmanas #Shorts"
     if len(base) <= 100:
         return base
-    trimmed = scene_title[:70].rstrip()
-    return f"{trimmed}... #Shorts"[:100]
+    short_hi = scene_title_hindi[:35].rstrip()
+    short_en = title_en[:35].rstrip()
+    compact = f"{part_hi} | {short_hi} | {part_en} | {short_en} #Shorts"
+    return compact[:100].rstrip()
 
 
-def _build_description(caption_hindi: str, hashtags: str) -> str:
+def _build_description(
+    *,
+    part_number: int,
+    scene_title_hindi: str,
+    scene_title_en: str,
+    caption_hindi: str,
+    english_summary: str,
+    hashtags: str,
+) -> str:
     lines = [
-        caption_hindi,
+        f"भाग {part_number} · Part {part_number}",
+        f"{scene_title_hindi}",
+        f"{scene_title_en}",
         "",
-        hashtags.strip(),
+        caption_hindi.strip(),
         "",
-        "AI generated art · Automated devotional shorts for education and inspiration.",
-        "Images: Pollinations.ai (Flux)",
     ]
+    if english_summary.strip():
+        lines.extend([english_summary.strip(), ""])
+    lines.extend(
+        [
+            hashtags.strip(),
+            "",
+            "श्री रामचरित मानस — गोस्वामी तुलसीदास | Sri Ramcharitmanas by Goswami Tulsidas",
+            "AI-generated devotional art · Single-owner automated Short for education and inspiration.",
+            "Images: Cloudflare Workers AI (Flux). Voice: Edge TTS (Hindi).",
+            "",
+            "Subscribe for the next part · अगले भाग के लिए सब्सक्राइब करें",
+        ]
+    )
     return "\n".join(lines)[:4900]
 
 
-def _build_tags(scene_title: str) -> list[str]:
+def _build_tags(scene_title_hindi: str, part_number: int) -> list[str]:
+    title_en = title_english_from_hindi(scene_title_hindi)
     base = [
         "Shorts",
+        "Ramcharitmanas",
         "Ramayan",
-        "Mahabharat",
+        "Tulsidas",
         "Hindu",
         "Itihas",
-        "Bhagwan",
-        "Krishna",
+        "Bhakti",
         "Ram",
-        "AI art",
+        "Sita",
+        "Hanuman",
+        f"Part {part_number}",
+        f"भाग {part_number}",
     ]
-    words = [w for w in scene_title.replace("|", " ").split() if len(w) > 1]
-    return list(dict.fromkeys(base + words[:15]))[:30]
+    for src in (scene_title_hindi, title_en):
+        words = [w.strip("·|,") for w in re.split(r"[\s·|]+", src) if len(w.strip("·|,")) > 1]
+        base.extend(words)
+    kand = scene_title_hindi.split("·")[0].strip()
+    if kand in _KAND_EN:
+        base.append(_KAND_EN[kand])
+        base.append(kand)
+    deduped = list(dict.fromkeys(base))
+    return deduped[:30]
 
 
 def upload_video(
@@ -77,6 +162,8 @@ def upload_video(
     *,
     scene_title: str,
     caption_hindi: str,
+    part_number: int = 1,
+    image_prompt_en: str = "",
     settings: Settings | None = None,
 ) -> str:
     """
@@ -91,18 +178,32 @@ def upload_video(
     if not video_path.is_file():
         raise ValueError(f"Video file not found: {video_path}")
 
+    privacy = (settings.privacy_status or "public").strip().lower()
+    if privacy not in ("public", "unlisted", "private"):
+        privacy = "public"
+
+    title_en = title_english_from_hindi(scene_title)
+    english_summary = english_summary_from_prompt(image_prompt_en)
+
     creds = _build_credentials(settings)
     youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
 
     body: dict = {
         "snippet": {
-            "title": _build_title(scene_title),
-            "description": _build_description(caption_hindi, settings.channel_hashtags),
-            "tags": _build_tags(scene_title),
+            "title": _build_title(scene_title, part_number),
+            "description": _build_description(
+                part_number=part_number,
+                scene_title_hindi=scene_title,
+                scene_title_en=title_en,
+                caption_hindi=caption_hindi,
+                english_summary=english_summary,
+                hashtags=settings.channel_hashtags,
+            ),
+            "tags": _build_tags(scene_title, part_number),
             "categoryId": "22",
         },
         "status": {
-            "privacyStatus": settings.privacy_status,
+            "privacyStatus": privacy,
             "selfDeclaredMadeForKids": False,
         },
     }
@@ -167,5 +268,5 @@ def upload_video(
         raise RuntimeError(f"YouTube upload failed: {error}")
 
     video_id = str(response["id"])
-    logger.info("YouTube upload complete: video_id=%s", video_id)
+    logger.info("YouTube upload complete: video_id=%s privacy=%s", video_id, privacy)
     return video_id

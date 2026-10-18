@@ -1,6 +1,17 @@
 {
-  "index": 4839,
-  "last_run_date": null,
-  "daily_slots": {},
-  "history": []
+  "index": 1,
+  "last_run_date": "2026-10-18",
+  "daily_slots": {
+    "2026-10-18": [
+      "morning"
+    ]
+  },
+  "history": [
+    {
+      "date": "2026-10-18",
+      "slot": "morning",
+      "title": "बालकाण्ड · दोहा 0 · shloka",
+      "video_id": "haHMjhWoehk"
+    }
+  ]
 }
