@@ -1,0 +1,86 @@
+# Three Shorts per day (5s each): subah 08:00, dopahar 13:00, sham 18:00 IST.
+# Commits data/state.json after each run to preserve slot progress.
+
+name: Daily AI Short
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+    - cron: "30 7 * * *"
+    - cron: "30 12 * * *"
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "morning | afternoon | evening"
+        required: true
+        default: morning
+        type: choice
+        options:
+          - morning
+          - afternoon
+          - evening
+
+permissions:
+  contents: write
+
+jobs:
+  upload-short:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve slot
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "SLOT=${{ github.event.inputs.slot }}" >> "$GITHUB_ENV"
+          else
+            case "${{ github.event.schedule }}" in
+              "30 2 * * *") echo "SLOT=morning" >> "$GITHUB_ENV" ;;
+              "30 7 * * *") echo "SLOT=afternoon" >> "$GITHUB_ENV" ;;
+              "30 12 * * *") echo "SLOT=evening" >> "$GITHUB_ENV" ;;
+              *) echo "SLOT=morning" >> "$GITHUB_ENV" ;;
+            esac
+          fi
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pipeline for slot
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          VIDEO_DURATION: "15"
+          SCENES_PER_RUN: "1"
+          ENABLE_VOICEOVER: "true"
+          ENABLE_TEXT_OVERLAY: "true"
+          PRIVACY_STATUS: public
+        run: python run_daily.py --slot "$SLOT"
+
+      - name: Commit state.json if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/state.json
+          if git diff --staged --quiet; then
+            echo "No state changes to commit."
+            exit 0
+          fi
+          git pull --rebase origin "${{ github.ref_name }}"
+          git commit -m "chore: update state after ${{ env.SLOT }} short"
+          git push
