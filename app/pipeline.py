@@ -194,6 +194,11 @@ def run_pipeline(
             float(settings.video_duration),
             expand_text=append_narration_expansion,
         )
+        if voiceover_file is None or not voiceover_file.is_file():
+            raise RuntimeError(
+                "Voiceover generation failed (Edge TTS / fallback). "
+                "Refusing to upload a silent Short."
+            )
         logger.info("TTS step took %.2fs", time.perf_counter() - t0)
 
     t0 = time.perf_counter()

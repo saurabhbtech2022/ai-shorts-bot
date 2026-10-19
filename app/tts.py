@@ -169,19 +169,21 @@ def _synthesize_edge_cli(text: str, dest: Path, settings: Settings) -> bool:
         else:
             return False
 
+    voice = settings.tts_voice or DEFAULT_EDGE_VOICE
+    rate = settings.tts_rate or "+0%"
     cmd = [
         binary,
-        "--voice",
-        settings.tts_voice or DEFAULT_EDGE_VOICE,
-        "--rate",
-        settings.tts_rate,
+        f"--voice={voice}",
+        f"--rate={rate}",
         "--text",
         text,
         "--write-media",
         str(dest),
     ]
-    if settings.tts_pitch:
-        cmd.extend(["--pitch", settings.tts_pitch])
+    pitch = (settings.tts_pitch or "").strip()
+    if pitch:
+        # Use --pitch=-2Hz form; bare "-2Hz" is parsed as a separate CLI flag.
+        cmd.append(f"--pitch={pitch}")
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=False, timeout=120)

@@ -69,6 +69,7 @@ jobs:
           VIDEO_DURATION: "15"
           SCENES_PER_RUN: "1"
           ENABLE_VOICEOVER: "true"
+          TTS_FALLBACK_GTTS: "true"
           ENABLE_TEXT_OVERLAY: "true"
           ENABLE_PART_BADGE: "true"
           ENABLE_SUBSCRIBE_CTA: "true"
