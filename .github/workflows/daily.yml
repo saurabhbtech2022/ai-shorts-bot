@@ -1,5 +1,6 @@
-# Three Shorts per day (5s each): subah 08:00, dopahar 13:00, sham 18:00 IST.
-# Commits data/state.json after each run to preserve slot progress.
+# Three Shorts per day (15s): subah 08:00, dopahar 13:00, sham 18:00 IST (UTC cron below).
+# Requires public repo (or GitHub Pro) for schedule events to fire.
+# Commits data/state.json after each successful upload.
 
 name: Daily AI Short
 
