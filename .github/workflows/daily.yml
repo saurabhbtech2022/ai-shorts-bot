@@ -1,14 +1,27 @@
-# Three Shorts per day (15s): subah 08:00, dopahar 13:00, sham 18:00 IST (UTC cron below).
-# Requires public repo (or GitHub Pro) for schedule events to fire.
-# Commits data/state.json after each successful upload.
+# Three Shorts per day (15s): subah 08:00, dopahar 13:00, sham 18:00 IST.
+# Each slot has a primary cron plus two later backups. GitHub often delays or
+# drops a single :30 tick and does not retry it. Backups are safe: a slot
+# already listed in data/state.json is skipped before install.
+# Requires a public repo (or GitHub Pro) for schedule events.
+# Do not trust github.event.schedule — with multiple crons it often reports
+# only the first expression, which forced every automatic run to morning.
 
 name: Daily AI Short
 
 on:
   schedule:
+    # morning 08:00 IST, backups 08:45 and 09:30
     - cron: "30 2 * * *"
+    - cron: "15 3 * * *"
+    - cron: "0 4 * * *"
+    # afternoon 13:00 IST, backups 13:45 and 14:30
     - cron: "30 7 * * *"
+    - cron: "15 8 * * *"
+    - cron: "0 9 * * *"
+    # evening 18:00 IST, backups 18:45 and 19:30
     - cron: "30 12 * * *"
+    - cron: "15 13 * * *"
+    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
       slot:
@@ -36,15 +49,44 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "SLOT=${{ github.event.inputs.slot }}" >> "$GITHUB_ENV"
           else
-            case "${{ github.event.schedule }}" in
-              "30 2 * * *") echo "SLOT=morning" >> "$GITHUB_ENV" ;;
-              "30 7 * * *") echo "SLOT=afternoon" >> "$GITHUB_ENV" ;;
-              "30 12 * * *") echo "SLOT=evening" >> "$GITHUB_ENV" ;;
-              *) echo "SLOT=morning" >> "$GITHUB_ENV" ;;
-            esac
+            HOUR=$(TZ=Asia/Kolkata date +%H)
+            HOUR=$((10#$HOUR))
+            if [ "$HOUR" -lt 12 ]; then
+              echo "SLOT=morning" >> "$GITHUB_ENV"
+            elif [ "$HOUR" -lt 17 ]; then
+              echo "SLOT=afternoon" >> "$GITHUB_ENV"
+            else
+              echo "SLOT=evening" >> "$GITHUB_ENV"
+            fi
           fi
 
+      - name: Skip if this slot already uploaded
+        id: gate
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime
+          from pathlib import Path
+          from zoneinfo import ZoneInfo
+
+          slot = os.environ["SLOT"]
+          today = datetime.now(ZoneInfo("Asia/Kolkata")).date().isoformat()
+          done = []
+          path = Path("data/state.json")
+          if path.is_file():
+              state = json.loads(path.read_text())
+              done = list((state.get("daily_slots") or {}).get(today) or [])
+          skip = slot in done and os.environ.get("GITHUB_EVENT_NAME") == "schedule"
+          print(f"today={today} slot={slot} done={done} skip={skip}")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write(f"skip={'true' if skip else 'false'}\n")
+          PY
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+
       - name: Set up Python 3.11
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -52,14 +94,17 @@ jobs:
           cache-dependency-path: requirements.txt
 
       - name: Install system dependencies
+        if: steps.gate.outputs.skip != 'true'
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg fonts-noto
 
       - name: Install Python dependencies
+        if: steps.gate.outputs.skip != 'true'
         run: pip install -r requirements.txt
 
       - name: Run pipeline for slot
+        if: steps.gate.outputs.skip != 'true'
         env:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
@@ -78,6 +123,7 @@ jobs:
         run: python run_daily.py --slot "$SLOT"
 
       - name: Commit state.json if changed
+        if: steps.gate.outputs.skip != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
