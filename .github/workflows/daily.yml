@@ -1,27 +1,11 @@
 # Three Shorts per day (15s): subah 08:00, dopahar 13:00, sham 18:00 IST.
-# Each slot has a primary cron plus two later backups. GitHub often delays or
-# drops a single :30 tick and does not retry it. Backups are safe: a slot
-# already listed in data/state.json is skipped before install.
-# Requires a public repo (or GitHub Pro) for schedule events.
-# Do not trust github.event.schedule — with multiple crons it often reports
-# only the first expression, which forced every automatic run to morning.
+# Timing is owned by cron-job.org, which calls workflow_dispatch with an
+# explicit slot. GitHub's own schedule is not used: it delays for hours and
+# a late run was uploading the next day's morning video after midnight.
 
 name: Daily AI Short
 
 on:
-  schedule:
-    # morning 08:00 IST, backups 08:45 and 09:30
-    - cron: "30 2 * * *"
-    - cron: "15 3 * * *"
-    - cron: "0 4 * * *"
-    # afternoon 13:00 IST, backups 13:45 and 14:30
-    - cron: "30 7 * * *"
-    - cron: "15 8 * * *"
-    - cron: "0 9 * * *"
-    # evening 18:00 IST, backups 18:45 and 19:30
-    - cron: "30 12 * * *"
-    - cron: "15 13 * * *"
-    - cron: "0 14 * * *"
   workflow_dispatch:
     inputs:
       slot:
@@ -46,19 +30,16 @@ jobs:
 
       - name: Resolve slot
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "SLOT=${{ github.event.inputs.slot }}" >> "$GITHUB_ENV"
-          else
-            HOUR=$(TZ=Asia/Kolkata date +%H)
-            HOUR=$((10#$HOUR))
-            if [ "$HOUR" -lt 12 ]; then
-              echo "SLOT=morning" >> "$GITHUB_ENV"
-            elif [ "$HOUR" -lt 17 ]; then
-              echo "SLOT=afternoon" >> "$GITHUB_ENV"
-            else
-              echo "SLOT=evening" >> "$GITHUB_ENV"
-            fi
-          fi
+          SLOT="${{ github.event.inputs.slot }}"
+          case "$SLOT" in
+            morning|afternoon|evening)
+              echo "SLOT=$SLOT" >> "$GITHUB_ENV"
+              ;;
+            *)
+              echo "Refusing to run without an explicit slot from cron-job.org."
+              exit 1
+              ;;
+          esac
 
       - name: Skip if this slot already uploaded
         id: gate
