@@ -74,11 +74,27 @@ jobs:
           cache: pip
           cache-dependency-path: requirements.txt
 
-      - name: Install system dependencies
+      # Static ffmpeg from GitHub releases. apt-get update was hanging for
+      # tens of minutes on the Ubuntu mirror. Hindi text uses the font
+      # already in assets/fonts, so fonts-noto is not installed either.
+      - name: Install ffmpeg
         if: steps.gate.outputs.skip != 'true'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg fonts-noto
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 \
+            --connect-timeout 20 --max-time 90 --retry-max-time 180 \
+            -o "$RUNNER_TEMP/ffmpeg.tar.xz" \
+            "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz"
+          tar -xJf "$RUNNER_TEMP/ffmpeg.tar.xz" -C "$RUNNER_TEMP/ffmpeg" --strip-components=1
+          echo "$RUNNER_TEMP/ffmpeg/bin" >> "$GITHUB_PATH"
+          ffmpeg="$RUNNER_TEMP/ffmpeg/bin/ffmpeg"
+          "$ffmpeg" -hide_banner -version
+          "$RUNNER_TEMP/ffmpeg/bin/ffprobe" -hide_banner -version
+          "$ffmpeg" -hide_banner -filters > "$RUNNER_TEMP/ffmpeg-filters.txt"
+          "$ffmpeg" -hide_banner -encoders > "$RUNNER_TEMP/ffmpeg-encoders.txt"
+          grep -q drawtext "$RUNNER_TEMP/ffmpeg-filters.txt"
+          grep -q libx264 "$RUNNER_TEMP/ffmpeg-encoders.txt"
 
       - name: Install Python dependencies
         if: steps.gate.outputs.skip != 'true'
