@@ -1,5 +1,5 @@
 {
-  "index": 41,
+  "index": 42,
   "last_run_date": "2026-10-31",
   "daily_slots": {
     "2026-10-18": [
@@ -69,7 +69,8 @@
     ],
     "2026-10-31": [
       "morning",
-      "afternoon"
+      "afternoon",
+      "evening"
     ]
   },
   "history": [
@@ -318,6 +319,12 @@
       "slot": "afternoon",
       "title": "बालकाण्ड · दोहा 5 · doha",
       "video_id": "ltk7ZA9jd_A"
+    },
+    {
+      "date": "2026-10-31",
+      "slot": "evening",
+      "title": "बालकाण्ड · दोहा 6 · chaupai",
+      "video_id": "MaM8ZA2ZGi0"
     }
   ]
 }
