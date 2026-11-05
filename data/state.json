@@ -1,5 +1,5 @@
 {
-  "index": 56,
+  "index": 57,
   "last_run_date": "2026-11-05",
   "daily_slots": {
     "2026-10-18": [
@@ -94,7 +94,8 @@
     ],
     "2026-11-05": [
       "morning",
-      "afternoon"
+      "afternoon",
+      "evening"
     ]
   },
   "history": [
@@ -433,6 +434,12 @@
       "slot": "afternoon",
       "title": "बालकाण्ड · दोहा 7 · doha",
       "video_id": "VmsEN664E-s"
+    },
+    {
+      "date": "2026-11-05",
+      "slot": "evening",
+      "title": "बालकाण्ड · दोहा 7 · doha",
+      "video_id": "i3nWLFXlCv4"
     }
   ]
 }
