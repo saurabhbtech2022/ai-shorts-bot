@@ -1,5 +1,5 @@
 {
-  "index": 67,
+  "index": 68,
   "last_run_date": "2026-11-09",
   "daily_slots": {
     "2026-10-18": [
@@ -113,7 +113,8 @@
       "evening"
     ],
     "2026-11-09": [
-      "morning"
+      "morning",
+      "evening"
     ]
   },
   "history": [
@@ -518,6 +519,12 @@
       "slot": "morning",
       "title": "बालकाण्ड · दोहा 9 · chaupai",
       "video_id": "89N1L_7V1nY"
+    },
+    {
+      "date": "2026-11-09",
+      "slot": "evening",
+      "title": "बालकाण्ड · दोहा 9 · chaupai",
+      "video_id": "GHtQdCC2Kww"
     }
   ]
 }
