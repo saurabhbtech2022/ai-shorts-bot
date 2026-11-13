@@ -1,5 +1,5 @@
 {
-  "index": 78,
+  "index": 79,
   "last_run_date": "2026-11-13",
   "daily_slots": {
     "2026-10-18": [
@@ -132,7 +132,8 @@
       "evening"
     ],
     "2026-11-13": [
-      "morning"
+      "morning",
+      "afternoon"
     ]
   },
   "history": [
@@ -603,6 +604,12 @@
       "slot": "morning",
       "title": "बालकाण्ड · दोहा 10 · chhand",
       "video_id": "-hKB-lIedI4"
+    },
+    {
+      "date": "2026-11-13",
+      "slot": "afternoon",
+      "title": "बालकाण्ड · दोहा 10 · doha",
+      "video_id": "0zNpeOhq6BE"
     }
   ]
 }
