@@ -129,6 +129,26 @@ def _should_retry(exc: Exception) -> bool:
     return True
 
 
+def _cloudflare_client_error_message(status_code: int, body: str) -> str:
+    """Map common Cloudflare auth failures to actionable guidance."""
+    lower = body.lower()
+    if status_code == 403 and (
+        "9109" in body or "cannot use the access token from location" in lower
+    ):
+        return (
+            "Cloudflare 403/9109: API token blocked by Client IP Address Filtering. "
+            "GitHub Actions IPs change — remove IP restrictions on the token "
+            "(Dashboard → My Profile → API Tokens → Edit), or create a new token "
+            "with Workers AI permission and NO IP filter, then update secret CF_API_TOKEN."
+        )
+    if status_code == 401:
+        return (
+            "Cloudflare 401: token invalid or missing Workers AI permission. "
+            "Recreate API token with Account = this account and Workers AI → Edit (or Read)."
+        )
+    return f"Cloudflare client error {status_code}: {body[:300]}"
+
+
 def _fetch_cloudflare(prompt: str, settings: Settings) -> bytes:
     if not settings.cloudflare_configured:
         raise ImageGenerationError("Cloudflare Workers AI not configured")
@@ -143,15 +163,9 @@ def _fetch_cloudflare(prompt: str, settings: Settings) -> bytes:
     logger.info("Fetching image from Cloudflare Workers AI (flux-1-schnell)")
     with httpx.Client(timeout=settings.cloudflare_timeout_seconds) as client:
         response = client.post(url, json=body, headers=headers)
-        if response.status_code == 401:
-            raise ImageClientError(
-                "Cloudflare 401: token valid for verify but not for Workers AI. "
-                "Recreate API token with Account resource = this account and "
-                "permission Workers AI → Edit (or Read)."
-            )
         if 400 <= response.status_code < 500:
             raise ImageClientError(
-                f"Cloudflare client error {response.status_code}: {response.text[:300]}"
+                _cloudflare_client_error_message(response.status_code, response.text)
             )
         response.raise_for_status()
         return _extract_image_bytes_from_response(response)
@@ -294,13 +308,12 @@ def fetch_image_bytes(prompt: str, title: str, settings: Settings | None = None)
     if file_bytes:
         return file_bytes
 
+    # No silent gradient upload: fail closed so only real AI (or explicit fallback JPGs) ship.
     if not settings.cloudflare_configured:
         raise ImageGenerationError(
-            "Cloudflare Workers AI not ready: set CF_ACCOUNT_ID in .env "
-            "(Dashboard → Workers & Pages → Overview → Account ID). "
-            "Pollinations is disabled."
+            "Cloudflare Workers AI not ready: set CF_ACCOUNT_ID + CF_API_TOKEN. "
+            "Pollinations is disabled unless ENABLE_POLLINATIONS=true."
         )
-
     raise ImageGenerationError(
         f"Cloudflare image generation failed after retries. Last error: {last_error}"
     )
