@@ -56,20 +56,21 @@ class Settings(BaseSettings):
     )
 
     scenes_per_run: int = Field(default=1, alias="SCENES_PER_RUN", ge=1, le=10)
-    scene_slide_seconds: int = Field(default=15, alias="SCENE_SLIDE_SECONDS", ge=1, le=59)
+    scene_slide_seconds: int = Field(default=22, alias="SCENE_SLIDE_SECONDS", ge=1, le=59)
     slideshow_crossfade_seconds: float = Field(
         default=0.5,
         alias="SLIDESHOW_CROSSFADE_SECONDS",
         ge=0.0,
         le=3.0,
     )
-    video_duration: int = Field(default=15, alias="VIDEO_DURATION", ge=1, le=59)
+    # Hook + verse + Hindi arth fit best around 20–25s (Shorts max still <60).
+    video_duration: int = Field(default=22, alias="VIDEO_DURATION", ge=1, le=59)
     privacy_status: str = Field(default="public", alias="PRIVACY_STATUS")
     enable_voiceover: bool = Field(default=True, alias="ENABLE_VOICEOVER")
     tts_engine: str = Field(default="edge", alias="TTS_ENGINE")
     tts_voice: str = Field(default="hi-IN-MadhurNeural", alias="TTS_VOICE")
     tts_rate: str = Field(
-        default="+5%",
+        default="+0%",
         alias="TTS_RATE",
         description="Edge TTS speaking rate, e.g. -10% slower, +5% faster",
     )

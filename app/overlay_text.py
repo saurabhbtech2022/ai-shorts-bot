@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import re
 
-from app.narration import _context_from_image_prompt, _ensure_period
+from app.narration import (
+    _context_from_image_prompt,
+    _ensure_period,
+    build_overlay_arth_line,
+)
 from app.prompts_loader import ScenePrompt
 
 # Common Ramayan names/tokens often written half in Roman in prompts.txt
@@ -63,10 +67,9 @@ def normalize_mixed_hindi(text: str) -> str:
 
 def build_scene_overlay(scene: ScenePrompt) -> str:
     """
-    Short line(s) for video burn-in — must be understandable at a glance.
+    Short on-screen line: Hindi arth first so viewers stay and understand.
 
-    Uses optional ``overlay_hindi`` on the scene when set; otherwise cleans caption
-    or falls back to a scene-specific Hindi line from the image prompt.
+    Uses optional ``overlay_hindi`` when set; otherwise a cleaned meaning line.
     """
     custom = (scene.overlay_hindi or "").strip()
     if custom:
@@ -76,13 +79,8 @@ def build_scene_overlay(scene: ScenePrompt) -> str:
     if _latin_letter_count(caption) >= 4:
         cleaned = normalize_mixed_hindi(caption)
         if len(cleaned) >= 12 and _latin_letter_count(cleaned) == 0:
-            return cleaned[:OVERLAY_MAX_LEN]
+            return f"अर्थ: {cleaned}"[:OVERLAY_MAX_LEN]
         context = _context_from_image_prompt(scene.image_prompt_en)
-        title = normalize_mixed_hindi(scene.title_hindi)
-        if title and len(title) < 40:
-            line = f"{title} — {context}"
-        else:
-            line = context
-        return line[:OVERLAY_MAX_LEN]
+        return f"अर्थ: {context}"[:OVERLAY_MAX_LEN]
 
-    return _ensure_period(caption)[:OVERLAY_MAX_LEN]
+    return build_overlay_arth_line(scene, OVERLAY_MAX_LEN)

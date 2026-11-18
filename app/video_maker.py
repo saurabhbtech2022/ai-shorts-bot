@@ -35,11 +35,18 @@ def resolve_devanagari_font() -> Path | None:
 
 
 def _escape_drawtext(text: str) -> str:
-    escaped = text.replace("\\", "\\\\")
+    """Escape text for ffmpeg drawtext inside text='...' filter options.
+
+    ``\\'`` breaks libavfilter quoting (ends up as ``No such filter: '0'``),
+    so ASCII quotes are replaced with Unicode lookalikes instead.
+    """
+    escaped = text.replace("\r", " ").replace("\n", " ")
+    escaped = escaped.replace("'", "’").replace('"', "”")
+    escaped = escaped.replace("\\", "\\\\")
     escaped = escaped.replace(":", "\\:")
-    escaped = escaped.replace("'", "\\'")
     escaped = escaped.replace("%", "\\%")
-    escaped = escaped.replace("\n", " ")
+    # Commas separate filters in a chain if quoting is lost; keep text safe.
+    escaped = escaped.replace(",", "\\,")
     return escaped
 
 
