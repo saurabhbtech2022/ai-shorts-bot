@@ -251,30 +251,51 @@ def _build_arth_explanation(scene: ScenePrompt, caption: str) -> str:
     return _ensure_period(re.sub(r"\s+", " ", explanation).strip())
 
 
-def build_scene_narration(scene: ScenePrompt, video_seconds: int = 22) -> str:
+def build_scene_narration(scene: ScenePrompt, video_seconds: int = 28) -> str:
     """
-    Hook + one short verse cue + DISTINCT Hindi arth (no caption repeat as meaning).
+    Hook + AI Hindi arth (Cloudflare LLM) with rule-based fallback.
 
-    Uses optional ``narration_hindi`` from prompts.txt (4th field) when set.
+    Hard target: keep speech sized for <=30s Shorts. Never repeat caption as arth.
+    Optional ``narration_hindi`` from prompts.txt overrides everything.
     """
     custom = (scene.narration_hindi or "").strip()
     if custom:
         return custom
 
+    # Clamp locally even if caller passes a higher value.
+    video_seconds = max(1, min(30, int(video_seconds)))
+
     title = _title_for_speech(scene.title_hindi.strip())
     form = _verse_form_hi(scene.title_hindi)
     caption = _ensure_period(scene.caption_hindi.strip())
-    hook = _hook_for_scene(scene)
-    arth = _build_arth_explanation(scene, caption)
     moral = _MORAL_LINES[scene.index % len(_MORAL_LINES)]
     kand = title.split("·")[0].strip() if "·" in title else "रामचरित मानस"
 
-    # Soft length targets for ~16–25s Shorts.
-    max_chars = max(220, int(video_seconds * CHARS_PER_SECOND * 1.05))
-    min_chars = max(170, int(video_seconds * CHARS_PER_SECOND * 0.85))
+    from app.arth_ai import generate_ai_hook_and_arth
+    from app.config import get_settings
 
-    # Do NOT speak full caption then "arth = same caption".
-    # Speak a short cue, then the real meaning/teaching.
+    ai_bits = None
+    try:
+        ai_bits = generate_ai_hook_and_arth(scene, get_settings())
+    except Exception:
+        ai_bits = None
+
+    if ai_bits:
+        hook = _ensure_period(ai_bits["hook"])
+        arth = _ensure_period(
+            ai_bits["arth"]
+            if ai_bits["arth"].startswith("सरल")
+            else f"सरल हिंदी में अर्थ समझिए — {ai_bits['arth']}"
+        )
+    else:
+        hook = _hook_for_scene(scene)
+        arth = _build_arth_explanation(scene, caption)
+
+    # Leave room for subscribe CTA (~4s) inside the <=30s clip.
+    speak_seconds = max(16, video_seconds - 4)
+    max_chars = max(200, int(speak_seconds * CHARS_PER_SECOND * 1.02))
+    min_chars = max(150, int(speak_seconds * CHARS_PER_SECOND * 0.82))
+
     cue = f"{kand} की इस पवित्र {form} का भाव सुनिए।"
     text = f"{hook} {cue} {arth}"
     text = re.sub(r"\s+", " ", text).strip()
@@ -292,14 +313,30 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 22) -> str:
     if "जय श्री राम" not in text and len(text) + 14 <= max_chars + 10:
         text = f"{text} जय श्री राम।"
 
+    # Hard trim if AI wrote too much — keep under 30s speech budget.
+    if len(text) > max_chars + 40:
+        text = _ensure_period(text[: max_chars].rstrip(" ,;:—-") + "…")
+
     return re.sub(r"\s+", " ", text).strip()
 
 
 def build_overlay_arth_line(scene: ScenePrompt, max_len: int = 96) -> str:
-    """On-screen meaning — teaching line, not a raw caption dump when avoidable."""
-    arth = _build_arth_explanation(scene, scene.caption_hindi.strip())
-    # Strip the spoken prefix for overlay brevity.
-    line = re.sub(r"^सरल हिंदी में अर्थ समझिए\s*[—\-–]?\s*", "", arth).strip()
+    """On-screen meaning — prefer AI arth, else rule-based teaching line."""
+    from app.arth_ai import generate_ai_hook_and_arth
+    from app.config import get_settings
+
+    ai_bits = None
+    try:
+        ai_bits = generate_ai_hook_and_arth(scene, get_settings())
+    except Exception:
+        ai_bits = None
+
+    if ai_bits and ai_bits.get("arth"):
+        line = ai_bits["arth"].strip()
+    else:
+        arth = _build_arth_explanation(scene, scene.caption_hindi.strip())
+        line = re.sub(r"^सरल हिंदी में अर्थ समझिए\s*[—\-–]?\s*", "", arth).strip()
+
     if len(line) > max_len - 6:
         line = line[: max_len - 8].rstrip() + "…"
     return f"अर्थ: {line}"[:max_len]

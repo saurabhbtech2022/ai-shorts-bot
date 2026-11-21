@@ -108,9 +108,11 @@ jobs:
           YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
-          VIDEO_DURATION: "22"
-          SCENE_SLIDE_SECONDS: "22"
+          VIDEO_DURATION: "28"
+          SCENE_SLIDE_SECONDS: "28"
           SCENES_PER_RUN: "1"
+          ENABLE_AI_ARTH: "true"
+          CF_LLM_MODEL: "@cf/meta/llama-3.1-8b-instruct"
           ENABLE_VOICEOVER: "true"
           TTS_RATE: "+0%"
           TTS_FALLBACK_GTTS: "true"

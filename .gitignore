@@ -2,6 +2,7 @@
 .env.local
 output/
 logs/
+data/arth_cache.json
 __pycache__/
 *.py[cod]
 *$py.class

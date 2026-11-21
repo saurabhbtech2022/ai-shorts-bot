@@ -56,15 +56,24 @@ class Settings(BaseSettings):
     )
 
     scenes_per_run: int = Field(default=1, alias="SCENES_PER_RUN", ge=1, le=10)
-    scene_slide_seconds: int = Field(default=22, alias="SCENE_SLIDE_SECONDS", ge=1, le=59)
+    scene_slide_seconds: int = Field(default=28, alias="SCENE_SLIDE_SECONDS", ge=1, le=30)
     slideshow_crossfade_seconds: float = Field(
         default=0.5,
         alias="SLIDESHOW_CROSSFADE_SECONDS",
         ge=0.0,
         le=3.0,
     )
-    # Hook + verse + Hindi arth fit best around 20–25s (Shorts max still <60).
-    video_duration: int = Field(default=22, alias="VIDEO_DURATION", ge=1, le=59)
+    # Hook + AI Hindi arth Shorts — hard cap 30s.
+    video_duration: int = Field(default=28, alias="VIDEO_DURATION", ge=1, le=30)
+    enable_ai_arth: bool = Field(
+        default=True,
+        alias="ENABLE_AI_ARTH",
+        description="Use Cloudflare Workers AI LLM for Hindi hook + arth",
+    )
+    cf_llm_model: str = Field(
+        default="@cf/meta/llama-3.1-8b-instruct",
+        alias="CF_LLM_MODEL",
+    )
     privacy_status: str = Field(default="public", alias="PRIVACY_STATUS")
     enable_voiceover: bool = Field(default=True, alias="ENABLE_VOICEOVER")
     tts_engine: str = Field(default="edge", alias="TTS_ENGINE")
