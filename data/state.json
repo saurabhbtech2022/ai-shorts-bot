@@ -1,5 +1,5 @@
 {
-  "index": 102,
+  "index": 103,
   "last_run_date": "2026-11-21",
   "daily_slots": {
     "2026-10-18": [
@@ -172,16 +172,11 @@
       "evening"
     ],
     "2026-11-21": [
-      "morning"
+      "morning",
+      "afternoon"
     ]
   },
   "history": [
-    {
-      "date": "2026-10-18",
-      "slot": "evening",
-      "title": "बालकाण्ड · दोहा 0 · shloka",
-      "video_id": "kMg_0a7xvpc"
-    },
     {
       "date": "2026-10-19",
       "slot": "morning",
@@ -775,6 +770,12 @@
       "slot": "morning",
       "title": "बालकाण्ड · दोहा 14 · chaupai",
       "video_id": "TEXcp4bKJvA"
+    },
+    {
+      "date": "2026-11-21",
+      "slot": "afternoon",
+      "title": "बालकाण्ड · दोहा 14 · chaupai",
+      "video_id": "gXuRH0rvF-o"
     }
   ]
 }
