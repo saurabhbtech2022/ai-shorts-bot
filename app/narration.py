@@ -1,4 +1,4 @@
-"""Build engaging Hindi voice scripts: hook + verse + simple arth (~16–25s)."""
+"""Build engaging Hindi voice scripts: hook + distinct arth (no verse repeat)."""
 
 from __future__ import annotations
 
@@ -21,38 +21,62 @@ _HOOKS = [
 ]
 
 _SCENE_CONTEXT: list[tuple[str, str]] = [
-    ("ayodhya", "सरयू के तट पर अयोध्या कोसल की राजधानी थी, जहाँ धर्म और शांति का वास था।"),
-    ("dasharatha", "महाराज दशरथ न्यायप्रिय और धर्मात्मा शासक थे।"),
-    ("yajna", "यज्ञ की पवित्र अग्नि में प्रजा की भलाई और वंश की कामना की गई।"),
-    ("rama", "भगवान श्री राम धर्म, करुणा और वीरता के प्रतीक हैं।"),
-    ("sita", "माता सीता पतिव्रता और साहस की मूर्ति हैं।"),
-    ("lakshman", "लक्ष्मण जी ने भाई राम की सेवा को ही अपना धर्म माना।"),
-    ("forest", "वन की कठिन यात्रा में भी राम ने सत्य और धर्म नहीं छोड़ा।"),
-    ("wedding", "राम और सीता का विवाह पावन संस्कारों से संपन्न हुआ।"),
-    ("exile", "चौदह वर्ष का वनवास राम ने शांत चित्त से स्वीकार किया।"),
-    ("hanuman", "हनुमान जी की भक्ति और शक्ति राम काज में अग्रणी रही।"),
-    ("lanka", "लंका युद्ध में अधर्म पर धर्म की विजय हुई।"),
-    ("shiva bow", "शिव धनुष टूटने से प्रभु की अलौकिक शक्ति प्रकट हुई।"),
-    ("dhanush", "मिथिला में शिव धनुष को श्री राम ने कृपा से तोड़ा।"),
-    ("sage", "ऋषि-मुनियों का आशीर्वाद रामचरित का आधार रहा।"),
-    ("saraswati", "वाणी और विद्या की देवी सरस्वती का स्मरण मंगल का आरंभ है।"),
-    ("ganesha", "विघ्नहर्ता गणेश का स्मरण हर शुभ कार्य से पहले किया जाता है।"),
-    ("guru", "गुरु की कृपा से ही सच्ची समझ और भक्ति खुलती है।"),
-    ("bhavani", "श्रद्धा और विश्वास के बिना ईश्वर का साक्षात्कार कठिन है।"),
+    ("ayodhya", "अयोध्या धर्म और शांति की नगरी थी।"),
+    ("dasharatha", "महाराज दशरथ न्याय और धर्म से राज्य चलाते थे।"),
+    ("yajna", "यज्ञ से प्रजा और वंश की मंगल कामना की जाती थी।"),
+    ("rama", "श्री राम धर्म, करुणा और सत्य के आदर्श हैं।"),
+    ("sita", "माता सीता धर्म और साहस की मूर्ति हैं।"),
+    ("lakshman", "लक्ष्मण जी की सेवा-भावना भाई-धर्म का आदर्श है।"),
+    ("forest", "वनवास में भी सत्य और धर्म नहीं छूटना चाहिए।"),
+    ("wedding", "राम-सीता विवाह धर्म और प्रेम का पावन मिलन है।"),
+    ("exile", "वनवास स्वीकार करना धर्म के प्रति समर्पण है।"),
+    ("hanuman", "हनुमान जी की भक्ति सेवा और शक्ति का संगम है।"),
+    ("lanka", "लंका प्रसंग अधर्म पर धर्म की जीत सिखाता है।"),
+    ("shiva bow", "शिव धनुष टूटना प्रभु की दिव्य शक्ति दिखाता है।"),
+    ("dhanush", "धनुष तोड़ना श्री राम की कृपा और सामर्थ्य है।"),
+    ("sage", "ऋषि-आशीर्वाद सच्चे मार्ग का दीपक है।"),
+    ("saraswati", "सरस्वती का स्मरण विद्या और शुद्ध वाणी देता है।"),
+    ("ganesha", "गणेश का स्मरण विघ्न हटाकर मंगल आरंभ कराता है।"),
+    ("guru", "गुरु-कृपा बिना सच्ची समझ नहीं खुलती।"),
+    ("bhavani", "श्रद्धा-विश्वास के बिना ईश्वर का अनुभव कठिन है।"),
+]
+
+# English meaning fragments → short Hindi teaching (order: longer phrases first).
+_EN_TO_HI: list[tuple[re.Pattern[str], str]] = [
+    (re.compile(r"\bi bow to\b", re.I), "मैं वंदना करता हूँ "),
+    (re.compile(r"\bwithout whom\b", re.I), "जिनके बिना "),
+    (re.compile(r"\beven the\b", re.I), "यहाँ तक कि "),
+    (re.compile(r"\bcannot\b", re.I), "नहीं कर सकते "),
+    (re.compile(r"\bdevotees?\b", re.I), "भक्त "),
+    (re.compile(r"\bcompassion\b|\bcompassionate\b", re.I), "कृपा "),
+    (re.compile(r"\bwisdom\b|\bwise\b", re.I), "ज्ञान "),
+    (re.compile(r"\bfaith\b", re.I), "श्रद्धा "),
+    (re.compile(r"\bbelief\b", re.I), "विश्वास "),
+    (re.compile(r"\bpraise[sd]?\b|\bglories\b|\bglory\b", re.I), "महिमा "),
+    (re.compile(r"\bvirtue[s]?\b", re.I), "गुण "),
+    (re.compile(r"\bstory\b|\btale\b", re.I), "कथा "),
+    (re.compile(r"\blord rama\b|\brama'?s?\b|\braghupati\b", re.I), "श्री राम "),
+    (re.compile(r"\bsaraswati\b|\bvani\b", re.I), "सरस्वती "),
+    (re.compile(r"\bganesha\b|\bvinayaka\b", re.I), "गणेश "),
+    (re.compile(r"\bguru\b", re.I), "गुरु "),
+    (re.compile(r"\bshiva\b|\bshankara\b", re.I), "शिव "),
+    (re.compile(r"\bbrahma\b", re.I), "ब्रह्मा "),
+    (re.compile(r"\bvedas?\b|\bvedic\b", re.I), "वेद "),
+    (re.compile(r"\bkali\b", re.I), "कलियुग "),
+    (re.compile(r"\bdeceit\b|\bdeceivers?\b|\bfalse\b", re.I), "छल "),
 ]
 
 _MORAL_LINES = [
-    "यही संदेश है — बिना समझ की भक्ति अधूरी रह जाती है।",
-    "इस अर्थ को जीवन में उतारिए, तभी कथा फल देती है।",
-    "अगले भाग में और गहराई आएगी — जुड़े रहिए।",
-    "श्रद्धा से सुनिए, और अर्थ को हृदय में बसाइए।",
+    "यही सीख है — अर्थ समझकर भक्ति करो, सिर्फ शब्द दोहराने से काम नहीं चलता।",
+    "इस भाव को जीवन में उतारो, तभी कथा फल देती है।",
+    "अगले भाग में और गहरा अर्थ आएगा — जुड़े रहिए।",
+    "श्रद्धा से सुनो, और संदेश को हृदय में बसाओ।",
 ]
 
 _EXTRA_SENTENCES = [
-    "यह प्रसंग श्री रामचरित मानस की अमर परंपरा का हिस्सा है।",
-    "इस कथा से हमें धैर्य, त्याग और परिवार के प्रति कर्तव्य मिलता है।",
-    "श्रद्धा से सुनिए और धर्म का मार्ग अपनाइए।",
-    "जय श्री राम, जय सीता राम।",
+    "यह प्रसंग रामचरित मानस की अमर शिक्षा है।",
+    "इससे धैर्य, त्याग और सच्चाई सीखने को मिलती है।",
+    "जय श्री राम।",
 ]
 
 
@@ -98,38 +122,138 @@ def _context_from_image_prompt(image_prompt_en: str) -> str:
     for keyword, sentence in _SCENE_CONTEXT:
         if re.search(rf"\b{re.escape(keyword)}\b", lower):
             return sentence
-    return "यह दृश्य रामचरित मानस के उसी पवित्र भाव को दर्शाता है।"
+    return "यह प्रसंग भक्ति और धर्म का गहरा संदेश देता है।"
 
 
 def _hook_for_scene(scene: ScenePrompt) -> str:
     return _HOOKS[scene.index % len(_HOOKS)]
 
 
-def _build_arth_explanation(scene: ScenePrompt, caption: str, *, already_spoken: bool) -> str:
-    """Conversational Hindi meaning so viewers stay and understand."""
-    context = _context_from_image_prompt(scene.image_prompt_en)
-    form = _verse_form_hi(scene.title_hindi)
-    core = caption.strip()
-    if core.endswith("।"):
-        core = core[:-1].strip()
+def _extract_english_meaning(image_prompt_en: str) -> str:
+    """Pull the English gloss embedded in the image-prompt field."""
+    text = image_prompt_en.strip()
+    text = re.sub(
+        r"^.*?,\s*(?:shloka|chaupai|doha|soratha)\s*,\s*",
+        "",
+        text,
+        count=1,
+        flags=re.I,
+    )
+    text = re.sub(
+        r",\s*traditional Indian.*$",
+        "",
+        text,
+        flags=re.I,
+    )
+    text = re.sub(r"^Ramcharitmanas illustration,\s*", "", text, flags=re.I)
+    text = re.sub(r"^[^,]*,\s*", "", text, count=1)  # drop kand label if still present
+    return re.sub(r"\s+", " ", text).strip(" ,.")
 
-    if already_spoken or len(core) > 90:
-        # Do not re-read the same long line — explain the feeling/teaching.
-        explanation = (
-            f"सरल हिंदी में अर्थ समझिए — {context.rstrip('।')}।"
-            f" इस {form} का भाव यही है कि भक्ति और समझ साथ चलें।"
+
+def _normalize_for_overlap(text: str) -> str:
+    t = text.lower()
+    t = re.sub(r"[^\w\u0900-\u097f]+", " ", t, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", t).strip()
+
+
+def _shares_too_much(a: str, b: str, *, threshold: float = 0.55) -> bool:
+    """True if one string largely repeats the other (token overlap)."""
+    ta = set(_normalize_for_overlap(a).split())
+    tb = set(_normalize_for_overlap(b).split())
+    if not ta or not tb:
+        return False
+    inter = len(ta & tb)
+    return inter / min(len(ta), len(tb)) >= threshold
+
+
+def _teaching_from_english(english: str) -> str | None:
+    """Best-effort Hindi teaching line from the English gloss (not a literal dump)."""
+    if not english or len(english) < 12:
+        return None
+    en = english.strip()
+    lower = en.lower()
+
+    # Intent templates — explain the POINT, don't recite the line again.
+    if re.search(r"\bbow to\b|\bvenerat|\bworship\b|\bpraise\b", lower):
+        return (
+            "मतलब यह है कि सच्चे आदर और स्मरण से ही मंगल शुरू होता है — "
+            "बिना विनय के ज्ञान अधूरा रहता है।"
         )
+    if re.search(r"\bfaith\b|\bbelief\b", lower) and re.search(r"\bwithout\b", lower):
+        return (
+            "संदेश साफ़ है — श्रद्धा और विश्वास के बिना भीतर बैठे प्रभु का अनुभव नहीं होता।"
+        )
+    if re.search(r"\bguru\b|\bwisdom\b|\bgrace\b", lower):
+        return (
+            "अर्थ यह है कि गुरु-कृपा और सच्चा ज्ञान टेढ़े मार्ग को भी पूज्य बना देता है।"
+        )
+    if re.search(r"\bdevotee\b|\bcompassion\b|\bhumble\b|\baffection\b", lower):
+        return (
+            "मतलब — प्रभु भक्तों के लिए कृपालु हैं; शरणागति अपनाने वाले पर कभी क्रोध नहीं करते।"
+        )
+    if re.search(r"\bkali\b|\bdeceit\b|\bcrow\b|\bfalse\b|\bpretend\b", lower):
+        return (
+            "सीधा अर्थ — कलियुग में दिखावा बहुत है; सच्ची भक्ति कर्म से पहचानी जाती है, वेश से नहीं।"
+        )
+    if re.search(r"\bpoet\b|\bintellect\b|\bstory\b|\btell this story\b", lower):
+        return (
+            "भाव यह है कि तुलसीदास जी विनम्रता से कहते हैं — प्रभु की महिमा अपार है, बुद्धि छोटी है, फिर भी भक्ति से गाते हैं।"
+        )
+    if re.search(r"\bbridge\b|\bant\b|\briver\b", lower):
+        return (
+            "अर्थ आसान है — कठिन मार्ग पर भी जब धर्म-सेतु बन जाए, तो छोटा जीव भी पार हो जाता है।"
+        )
+    if re.search(r"\brain\b|\bpearl\b|\bpoem\b|\breflect", lower):
+        return (
+            "मतलब — जब मन में सद्विचार बरसें, तभी काव्य और जीवन दोनों मोती जैसे निखरते हैं।"
+        )
+    if re.search(r"\bnot this\b|\bneti\b|\bceaselessly sing\b|\bglories\b", lower):
+        return (
+            "संदेश — प्रभु की महिमा इतनी बड़ी है कि देवता और वेद भी पूरा नहीं गा पाते, फिर भी गाते रहते हैं।"
+        )
+
+    # Lightweight lexical hint → still a teaching line, not a translation dump.
+    hints: list[str] = []
+    for pattern, hi in _EN_TO_HI:
+        if pattern.search(en) and hi.strip() not in hints:
+            hints.append(hi.strip())
+        if len(hints) >= 4:
+            break
+    if hints:
+        joined = "、".join(hints[:3]).replace("、", " और ")
+        return f"इस पंक्ति का भाव {joined} से जुड़ा है — समझकर सुनो, सिर्फ शब्द मत दोहराओ।"
+    return None
+
+
+def _build_arth_explanation(scene: ScenePrompt, caption: str) -> str:
+    """
+    Distinct Hindi meaning/teaching — must NOT re-read the same shloka/caption.
+    """
+    form = _verse_form_hi(scene.title_hindi)
+    english = _extract_english_meaning(scene.image_prompt_en)
+    context = _context_from_image_prompt(scene.image_prompt_en)
+    taught = _teaching_from_english(english)
+
+    if taught and not _shares_too_much(taught, caption):
+        explanation = f"सरल हिंदी में अर्थ समझिए — {taught}"
     else:
         explanation = (
-            f"सरल हिंदी में अर्थ — {core}।"
-            f" यानी {context.rstrip('।')}।"
+            f"सरल हिंदी में अर्थ समझिए — {context.rstrip('।')}।"
+            f" इस {form} का असली संदेश यही है कि दिखावे से नहीं, भाव और आचरण से भक्ति सिद्ध होती है।"
         )
-    return re.sub(r"\s+", " ", explanation).strip()
+
+    # Final guard: if somehow still too similar to caption, force generic teaching.
+    if _shares_too_much(explanation, caption, threshold=0.45):
+        explanation = (
+            f"सरल हिंदी में अर्थ समझिए — शब्दों को दोहराना पर्याप्त नहीं।"
+            f" इस {form} का मतलब है कि हमें विनय, श्रद्धा और सच्चाई से जीवन जीना चाहिए।"
+        )
+    return _ensure_period(re.sub(r"\s+", " ", explanation).strip())
 
 
 def build_scene_narration(scene: ScenePrompt, video_seconds: int = 22) -> str:
     """
-    Hook + verse/caption + Hindi arth, sized for ~video_seconds of natural TTS.
+    Hook + one short verse cue + DISTINCT Hindi arth (no caption repeat as meaning).
 
     Uses optional ``narration_hindi`` from prompts.txt (4th field) when set.
     """
@@ -140,29 +264,22 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 22) -> str:
     title = _title_for_speech(scene.title_hindi.strip())
     form = _verse_form_hi(scene.title_hindi)
     caption = _ensure_period(scene.caption_hindi.strip())
-    spoken_caption = caption
-    if len(spoken_caption) > 100:
-        spoken_caption = _ensure_period(spoken_caption[:97].rstrip(" ,;:—-") + "…")
-
     hook = _hook_for_scene(scene)
-    arth = _build_arth_explanation(
-        scene,
-        caption,
-        already_spoken=len(caption) > 90,
-    )
+    arth = _build_arth_explanation(scene, caption)
     moral = _MORAL_LINES[scene.index % len(_MORAL_LINES)]
     kand = title.split("·")[0].strip() if "·" in title else "रामचरित मानस"
 
-    # ~0.85–1.05× clip length → natural pace on 16–25s Shorts.
+    # Soft length targets for ~16–25s Shorts.
     max_chars = max(220, int(video_seconds * CHARS_PER_SECOND * 1.05))
     min_chars = max(170, int(video_seconds * CHARS_PER_SECOND * 0.85))
 
-    text = (
-        f"{hook} {kand} की यह पवित्र {form} सुनिए। "
-        f"{spoken_caption} {arth}"
-    )
+    # Do NOT speak full caption then "arth = same caption".
+    # Speak a short cue, then the real meaning/teaching.
+    cue = f"{kand} की इस पवित्र {form} का भाव सुनिए।"
+    text = f"{hook} {cue} {arth}"
     text = re.sub(r"\s+", " ", text).strip()
-    if len(text) + len(moral) + 1 <= max_chars:
+
+    if len(text) + len(moral) + 1 <= max_chars and not _shares_too_much(moral, caption):
         text = f"{text} {moral}"
 
     idx = 0
@@ -179,13 +296,13 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 22) -> str:
 
 
 def build_overlay_arth_line(scene: ScenePrompt, max_len: int = 96) -> str:
-    """Short on-screen meaning line for retention."""
-    caption = scene.caption_hindi.strip()
-    if not caption:
-        return "अर्थ सुनिए — अंत तक रुकिए।"
-    core = caption if len(caption) <= max_len - 6 else caption[: max_len - 8].rstrip() + "…"
-    line = f"अर्थ: {core}"
-    return line[:max_len]
+    """On-screen meaning — teaching line, not a raw caption dump when avoidable."""
+    arth = _build_arth_explanation(scene, scene.caption_hindi.strip())
+    # Strip the spoken prefix for overlay brevity.
+    line = re.sub(r"^सरल हिंदी में अर्थ समझिए\s*[—\-–]?\s*", "", arth).strip()
+    if len(line) > max_len - 6:
+        line = line[: max_len - 8].rstrip() + "…"
+    return f"अर्थ: {line}"[:max_len]
 
 
 def append_narration_expansion(text: str, expansion_index: int) -> str:
