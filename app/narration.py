@@ -253,9 +253,10 @@ def _build_arth_explanation(scene: ScenePrompt, caption: str) -> str:
 
 def build_scene_narration(scene: ScenePrompt, video_seconds: int = 28) -> str:
     """
-    Hook + AI Hindi arth (Cloudflare LLM) with rule-based fallback.
+    Order: hook → shlok/chaupai (caption) → AI Hindi arth → short moral.
 
-    Hard target: keep speech sized for <=30s Shorts. Never repeat caption as arth.
+    Hard target: keep speech sized for <=30s Shorts.
+    Arth must explain meaning, not merely re-read the same caption.
     Optional ``narration_hindi`` from prompts.txt overrides everything.
     """
     custom = (scene.narration_hindi or "").strip()
@@ -268,6 +269,11 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 28) -> str:
     title = _title_for_speech(scene.title_hindi.strip())
     form = _verse_form_hi(scene.title_hindi)
     caption = _ensure_period(scene.caption_hindi.strip())
+    # Keep verse speakable inside a Short.
+    spoken_verse = caption
+    if len(spoken_verse) > 110:
+        spoken_verse = _ensure_period(spoken_verse[:107].rstrip(" ,;:—-") + "…")
+
     moral = _MORAL_LINES[scene.index % len(_MORAL_LINES)]
     kand = title.split("·")[0].strip() if "·" in title else "रामचरित मानस"
 
@@ -282,23 +288,35 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 28) -> str:
 
     if ai_bits:
         hook = _ensure_period(ai_bits["hook"])
-        arth = _ensure_period(
-            ai_bits["arth"]
-            if ai_bits["arth"].startswith("सरल")
-            else f"सरल हिंदी में अर्थ समझिए — {ai_bits['arth']}"
-        )
+        arth_body = ai_bits["arth"].strip()
+        if arth_body.startswith("सरल"):
+            arth = _ensure_period(arth_body)
+        else:
+            arth = _ensure_period(f"अब सरल हिंदी में अर्थ समझिए — {arth_body}")
     else:
         hook = _hook_for_scene(scene)
         arth = _build_arth_explanation(scene, caption)
+        arth = arth.replace("सरल हिंदी में अर्थ समझिए", "अब सरल हिंदी में अर्थ समझिए", 1)
 
     # Leave room for subscribe CTA (~4s) inside the <=30s clip.
     speak_seconds = max(16, video_seconds - 4)
-    max_chars = max(200, int(speak_seconds * CHARS_PER_SECOND * 1.02))
-    min_chars = max(150, int(speak_seconds * CHARS_PER_SECOND * 0.82))
+    max_chars = max(220, int(speak_seconds * CHARS_PER_SECOND * 1.02))
+    min_chars = max(160, int(speak_seconds * CHARS_PER_SECOND * 0.82))
 
-    cue = f"{kand} की इस पवित्र {form} का भाव सुनिए।"
-    text = f"{hook} {cue} {arth}"
+    # 1) hook  2) shlok  3) arth  4) moral
+    intro = f"{kand} की यह पवित्र {form} सुनिए।"
+    text = f"{hook} {intro} {spoken_verse} {arth}"
     text = re.sub(r"\s+", " ", text).strip()
+
+    # If AI arth accidentally echoed the verse, force a distinct teaching line.
+    if _shares_too_much(arth, spoken_verse, threshold=0.55):
+        fallback = _build_arth_explanation(scene, caption).replace(
+            "सरल हिंदी में अर्थ समझिए",
+            "अब सरल हिंदी में अर्थ समझिए",
+            1,
+        )
+        text = f"{hook} {intro} {spoken_verse} {fallback}"
+        text = re.sub(r"\s+", " ", text).strip()
 
     if len(text) + len(moral) + 1 <= max_chars and not _shares_too_much(moral, caption):
         text = f"{text} {moral}"
@@ -313,7 +331,7 @@ def build_scene_narration(scene: ScenePrompt, video_seconds: int = 28) -> str:
     if "जय श्री राम" not in text and len(text) + 14 <= max_chars + 10:
         text = f"{text} जय श्री राम।"
 
-    # Hard trim if AI wrote too much — keep under 30s speech budget.
+    # Hard trim if too long — prefer keeping verse + start of arth.
     if len(text) > max_chars + 40:
         text = _ensure_period(text[: max_chars].rstrip(" ,;:—-") + "…")
 

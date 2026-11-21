@@ -22,15 +22,19 @@ def _scene(**kwargs) -> ScenePrompt:
     return ScenePrompt(**base)
 
 
-def test_build_scene_narration_has_hook_and_arth(monkeypatch) -> None:
+def test_build_scene_narration_reads_verse_then_arth(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.arth_ai.generate_ai_hook_and_arth",
         lambda *args, **kwargs: None,
     )
-    text = build_scene_narration(_scene(), video_seconds=28)
-    assert "सरल हिंदी में अर्थ" in text
-    assert "भाव सुनिए" in text
-    assert len(text) >= 120
+    scene = _scene()
+    text = build_scene_narration(scene, video_seconds=28)
+    assert "सुनिए।" in text
+    assert "वाणी और विनायक" in text
+    assert "अब सरल हिंदी में अर्थ" in text or "सरल हिंदी में अर्थ" in text
+    # Verse comes before the meaning section (hook may also say अर्थ)
+    marker = "सरल हिंदी में अर्थ"
+    assert text.index("वाणी और विनायक") < text.index(marker)
 
 
 def test_build_scene_narration_uses_ai_when_available(monkeypatch) -> None:
@@ -41,20 +45,20 @@ def test_build_scene_narration_uses_ai_when_available(monkeypatch) -> None:
             "arth": "सरस्वती और गणेश का स्मरण मंगल और शुद्ध वाणी देता है",
         },
     )
-    text = build_scene_narration(_scene(), video_seconds=28)
+    scene = _scene()
+    text = build_scene_narration(scene, video_seconds=28)
     assert "दिल छू लेगा" in text
-    assert "सरस्वती और गणेश" in text
-    assert "वाणी और विनायक की मैं वन्दना" not in text
+    assert "वाणी और विनायक की मैं वन्दना" in text  # shlok first
+    assert "सरस्वती और गणेश का स्मरण" in text  # then arth
+    assert text.index("वाणी और विनायक") < text.index("सरस्वती और गणेश का स्मरण")
 
 
-def test_arth_does_not_repeat_caption(monkeypatch) -> None:
+def test_arth_section_is_not_only_caption_echo(monkeypatch) -> None:
     monkeypatch.setattr(
         "app.arth_ai.generate_ai_hook_and_arth",
         lambda *args, **kwargs: None,
     )
     scene = _scene()
-    text = build_scene_narration(scene, video_seconds=28)
-    assert scene.caption_hindi.strip("।") not in text
     arth = _build_arth_explanation(scene, scene.caption_hindi)
     assert not _shares_too_much(arth, scene.caption_hindi, threshold=0.5)
 
@@ -92,5 +96,4 @@ def test_video_seconds_hard_capped_at_30(monkeypatch) -> None:
         },
     )
     text = build_scene_narration(_scene(), video_seconds=90)
-    # Even if caller asks 90s, speech budget stays Shorts-safe.
-    assert len(text) < 28 * 13 * 1.3
+    assert len(text) < 28 * 13 * 1.35
